@@ -40,7 +40,7 @@ ARG DD_AGENT_ARTIFACT=datadog-agent*_$TARGETARCH.deb
 ARG GENERAL_ARTIFACTS_CACHE_BUCKET_URL
 
 # copy everything - globbing with args wont work
-RUN cd /tmp/build/inputs/datadog-agent/Dockerfiles/agent && ls -a
+RUN ls -a
 COPY datadog-agent*_$TARGETARCH.deb /
 WORKDIR /output
 
