@@ -41,7 +41,7 @@ ARG GENERAL_ARTIFACTS_CACHE_BUCKET_URL
 
 # copy everything - globbing with args wont work
 RUN ls -a
-COPY datadog-agent*_$TARGETARCH.deb /
+# COPY datadog-agent*_$TARGETARCH.deb /
 WORKDIR /output
 
 # Get s6-overlay
