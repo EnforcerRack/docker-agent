@@ -43,56 +43,55 @@ ARG GENERAL_ARTIFACTS_CACHE_BUCKET_URL
 
 # COPY datadog-agent*_$TARGETARCH.deb /
 WORKDIR /output
-RUN ls -a
 
-# Get s6-overlay
-ENV S6_VERSION v1.22.1.0
-ENV JUST_CONTAINERS_DOWNLOAD_LOCATION=${GENERAL_ARTIFACTS_CACHE_BUCKET_URL:+${GENERAL_ARTIFACTS_CACHE_BUCKET_URL}/s6-overlay}
-ENV JUST_CONTAINERS_DOWNLOAD_LOCATION=${JUST_CONTAINERS_DOWNLOAD_LOCATION:-https://github.com/just-containers/s6-overlay/releases/download}
-RUN apt install --no-install-recommends -y curl ca-certificates
-RUN S6ARCH=$([ "$TARGETARCH" = "amd64" ] && echo "amd64" || echo "aarch64") && curl -L ${JUST_CONTAINERS_DOWNLOAD_LOCATION}/${S6_VERSION}/s6-overlay-${S6ARCH}.tar.gz -o /output/s6.tgz
-COPY s6.$TARGETARCH.sha256 /output/s6.$TARGETARCH.sha256
-# To calculate S6_SHA256SUM for a specific version, run:
-# curl -L https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-<arch>.tar.gz | sha256sum
-RUN echo "$(cat /output/s6.$TARGETARCH.sha256) /output/s6.tgz" | sha256sum -c - && rm -f /output/s6.$TARGETARCH.sha256
+# # Get s6-overlay
+# ENV S6_VERSION v1.22.1.0
+# ENV JUST_CONTAINERS_DOWNLOAD_LOCATION=${GENERAL_ARTIFACTS_CACHE_BUCKET_URL:+${GENERAL_ARTIFACTS_CACHE_BUCKET_URL}/s6-overlay}
+# ENV JUST_CONTAINERS_DOWNLOAD_LOCATION=${JUST_CONTAINERS_DOWNLOAD_LOCATION:-https://github.com/just-containers/s6-overlay/releases/download}
+# RUN apt install --no-install-recommends -y curl ca-certificates
+# RUN S6ARCH=$([ "$TARGETARCH" = "amd64" ] && echo "amd64" || echo "aarch64") && curl -L ${JUST_CONTAINERS_DOWNLOAD_LOCATION}/${S6_VERSION}/s6-overlay-${S6ARCH}.tar.gz -o /output/s6.tgz
+# COPY s6.$TARGETARCH.sha256 /output/s6.$TARGETARCH.sha256
+# # To calculate S6_SHA256SUM for a specific version, run:
+# # curl -L https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-<arch>.tar.gz | sha256sum
+# RUN echo "$(cat /output/s6.$TARGETARCH.sha256) /output/s6.tgz" | sha256sum -c - && rm -f /output/s6.$TARGETARCH.sha256
 
-# Extract and cleanup:
-#   - unused systemd unit
-#   - GPL sources for embedded software  # FIXME: move upstream
-#   - docs and manpages                  # FIXME: move upstream
-#   - static libraries                   # FIXME: move upstream
-#   - jmxfetch on nojmx build
+# # Extract and cleanup:
+# #   - unused systemd unit
+# #   - GPL sources for embedded software  # FIXME: move upstream
+# #   - docs and manpages                  # FIXME: move upstream
+# #   - static libraries                   # FIXME: move upstream
+# #   - jmxfetch on nojmx build
 
-RUN set -x; find / -maxdepth 1 -type f -name "datadog-agent*_$TARGETARCH.deb" ! -name "$DD_AGENT_ARTIFACT" -exec rm {} \; \
- && find / -maxdepth 1 -name "datadog-agent*_$TARGETARCH.deb" -exec dpkg -x {} . \; \
- && rm -rf usr etc/init lib \
-    opt/datadog-agent/sources \
-    opt/datadog-agent/embedded/share/doc \
-    opt/datadog-agent/embedded/share/man \
-    # self-test certificates that are detected (false positive) as private keys
-    opt/datadog-agent/embedded/lib/python*/site-packages/future/backports/test \
- && if [ "$PYTHON_VERSION" = "2" ]; then \
-        rm -rf \
-            opt/datadog-agent/embedded/bin/2to3-3* \
-            opt/datadog-agent/embedded/bin/easy_install-3* \
-            opt/datadog-agent/embedded/bin/idle* \
-            opt/datadog-agent/embedded/bin/pip3* \
-            opt/datadog-agent/embedded/bin/pydoc* \
-            opt/datadog-agent/embedded/bin/python3* \
-            opt/datadog-agent/embedded/bin/pyvenv* \
-            opt/datadog-agent/embedded/include/python3* \
-            opt/datadog-agent/embedded/lib/*python3* || true ;\
-    fi \
- && if [ "$PYTHON_VERSION" = "3" ]; then \
-        rm -rf \
-            opt/datadog-agent/embedded/bin/pip2* \
-            opt/datadog-agent/embedded/bin/python2* \
-            opt/datadog-agent/embedded/include/python2* \
-            opt/datadog-agent/embedded/lib/*python2* || true ;\
-    fi \
- && find opt/datadog-agent/ -iname "*.a" -delete \
- && if [ -z "$WITH_JMX" ]; then rm -rf opt/datadog-agent/bin/agent/dist/jmx; fi \
- && mkdir conf.d checks.d
+# RUN set -x; find / -maxdepth 1 -type f -name "datadog-agent*_$TARGETARCH.deb" ! -name "$DD_AGENT_ARTIFACT" -exec rm {} \; \
+#  && find / -maxdepth 1 -name "datadog-agent*_$TARGETARCH.deb" -exec dpkg -x {} . \; \
+#  && rm -rf usr etc/init lib \
+#     opt/datadog-agent/sources \
+#     opt/datadog-agent/embedded/share/doc \
+#     opt/datadog-agent/embedded/share/man \
+#     # self-test certificates that are detected (false positive) as private keys
+#     opt/datadog-agent/embedded/lib/python*/site-packages/future/backports/test \
+#  && if [ "$PYTHON_VERSION" = "2" ]; then \
+#         rm -rf \
+#             opt/datadog-agent/embedded/bin/2to3-3* \
+#             opt/datadog-agent/embedded/bin/easy_install-3* \
+#             opt/datadog-agent/embedded/bin/idle* \
+#             opt/datadog-agent/embedded/bin/pip3* \
+#             opt/datadog-agent/embedded/bin/pydoc* \
+#             opt/datadog-agent/embedded/bin/python3* \
+#             opt/datadog-agent/embedded/bin/pyvenv* \
+#             opt/datadog-agent/embedded/include/python3* \
+#             opt/datadog-agent/embedded/lib/*python3* || true ;\
+#     fi \
+#  && if [ "$PYTHON_VERSION" = "3" ]; then \
+#         rm -rf \
+#             opt/datadog-agent/embedded/bin/pip2* \
+#             opt/datadog-agent/embedded/bin/python2* \
+#             opt/datadog-agent/embedded/include/python2* \
+#             opt/datadog-agent/embedded/lib/*python2* || true ;\
+#     fi \
+#  && find opt/datadog-agent/ -iname "*.a" -delete \
+#  && if [ -z "$WITH_JMX" ]; then rm -rf opt/datadog-agent/bin/agent/dist/jmx; fi \
+#  && mkdir conf.d checks.d
 
 # Configuration:
 #   - copy default config files
