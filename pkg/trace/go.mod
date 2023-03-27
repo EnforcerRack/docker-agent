@@ -30,7 +30,7 @@ require (
 	github.com/stretchr/testify v1.8.2
 	github.com/tinylib/msgp v1.1.6
 	github.com/vmihailenco/msgpack/v4 v4.3.12
-	go.opentelemetry.io/collector/pdata v1.0.0-rc7
+	go.opentelemetry.io/collector/pdata v1.0.0-rc8
 	go.opentelemetry.io/collector/semconv v0.73.0
 	go.uber.org/atomic v1.10.0
 	golang.org/x/sys v0.6.0
