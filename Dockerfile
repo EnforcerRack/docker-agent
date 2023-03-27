@@ -1,51 +1,47 @@
-FROM debian:buster-20200803-slim
+FROM alpine:3.6
 
 MAINTAINER Datadog <package@datadoghq.com>
 
-ARG AGENT_VERSION_ARG=1:5.32.7-1
-ARG AGENT_REPO_ARG=http://apt.datad0g.com/
-ARG AGENT_REPO_CHANNEL_ARG=stable
+ARG AGENT_VERSION_ARG=5.31.0
 
-ENV DOCKER_DD_AGENT=yes \
+ENV DD_HOME=/opt/datadog-agent \
+    # prevent the agent from being started after install
+    DD_START_AGENT=0 \
+    DOCKER_DD_AGENT=yes \
+    PYCURL_SSL_LIBRARY=openssl \
     AGENT_VERSION=$AGENT_VERSION_ARG \
-    AGENT_REPO=$AGENT_REPO_ARG \
-    AGENT_REPO_CHANNEL=$AGENT_REPO_CHANNEL_ARG \
-    DD_ETC_ROOT=/etc/dd-agent \
-    PATH="/opt/datadog-agent/embedded/bin:/opt/datadog-agent/bin:${PATH}" \
-    PYTHONPATH=/opt/datadog-agent/agent \
+    INTEGRATIONS_VERSION=$AGENT_VERSION_ARG \
+    DD_ETC_ROOT="/opt/datadog-agent/agent" \
+    PATH="/opt/datadog-agent/venv/bin:/opt/datadog-agent/agent/bin:$PATH" \
+    PYTHONPATH="/opt/datadog-agent/agent" \
     DD_CONF_LOG_TO_SYSLOG=no \
     NON_LOCAL_TRAFFIC=yes \
     DD_SUPERVISOR_DELETE_USER=yes \
     DD_CONF_PROCFS_PATH="/host/proc"
 
-# workaround for stretch-slim missing man dirs
-RUN seq 1 8 | xargs -I{} mkdir -p /usr/share/man/man{}
+# Install minimal dependencies
+RUN apk add -qU --no-cache coreutils curl curl-dev python-dev tar sysstat tini
 
-# Install the Agent
-RUN apt-get update \
- && apt-get install --no-install-recommends -y gnupg dirmngr \
- && echo "deb ${AGENT_REPO} ${AGENT_REPO_CHANNEL} main" > /etc/apt/sources.list.d/datadog.list \
- && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A2923DFF56EDA6E76E55E492D3A80E30382E94DE \
- && apt-get update \
- && apt-get install --no-install-recommends -y datadog-agent="${AGENT_VERSION}" \
- && apt-get install --no-install-recommends -y ca-certificates \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Install build dependencies
+ADD https://raw.githubusercontent.com/DataDog/dd-agent/master/packaging/datadog-agent/source/setup_agent.sh /tmp/setup_agent.sh
+RUN apk add -qU --no-cache -t .build-deps gcc musl-dev postgresql-dev linux-headers libffi-dev \
+    # Install the agent
+    && sh /tmp/setup_agent.sh \
+    # Clean build dependencies
+    && apk del -q .build-deps \
+    && rm /tmp/setup_agent.sh
+
 
 # Add healthcheck script
-COPY probe.sh /probe.sh
+COPY probe-alpine.sh $DD_HOME/probe.sh
 
 # Configure the Agent
-# 1. Remove dd-agent user from init.d configuration
-# 2. Fix permission on /etc/init.d/datadog-agent
-# 3. Make healthcheck script executable
-RUN mv ${DD_ETC_ROOT}/datadog.conf.example ${DD_ETC_ROOT}/datadog.conf \
- && sed -i 's/AGENTUSER="dd-agent"/AGENTUSER="root"/g' /etc/init.d/datadog-agent \
- && chmod +x /etc/init.d/datadog-agent \
- && chmod +x /probe.sh
+# and make healthcheck script executable
+RUN cp ${DD_ETC_ROOT}/datadog.conf.example ${DD_ETC_ROOT}/datadog.conf \
+  && chmod +x $DD_HOME/probe.sh
 
 # Add Docker check
-COPY conf.d/docker_daemon.yaml ${DD_ETC_ROOT}/conf.d/docker_daemon.yaml
+COPY conf.d/docker_daemon.yaml "${DD_ETC_ROOT}/conf.d/docker_daemon.yaml"
 # Add install and config files
 COPY entrypoint.sh /entrypoint.sh
 COPY config_builder.py /config_builder.py
@@ -53,12 +49,14 @@ COPY config_builder.py /config_builder.py
 # Extra conf.d and checks.d
 VOLUME ["/conf.d", "/checks.d"]
 
-# Expose DogStatsD and trace-agent ports
-EXPOSE 8125/udp 8126/tcp
+# Expose DogStatsD port
+EXPOSE 8125/udp
 
 # Healthcheck
 HEALTHCHECK --interval=5m --timeout=3s --retries=1 \
   CMD ./probe.sh
 
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["supervisord", "-n", "-c", "/etc/dd-agent/supervisor.conf"]
+ENTRYPOINT ["/sbin/tini", "-g", "--", "/entrypoint.sh"]
+
+WORKDIR $DD_HOME
+CMD ["supervisord", "-c", "agent/supervisor.conf"]
