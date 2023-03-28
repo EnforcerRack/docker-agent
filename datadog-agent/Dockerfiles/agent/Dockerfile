@@ -195,8 +195,7 @@ RUN date +%Y%m%dT000000Z > .debian_repo_snapshot_date
 # Expose DogStatsD and trace-agent ports
 EXPOSE 8125/udp 8126/tcp
 
-HEALTHCHECK --interval=30s --timeout=5s --retries=2 \
-  CMD ["/probe.sh"]
+HEALTHCHECK --interval=30s --timeout=5s --retries=2 CMD ["/probe.sh"]
 
 # Leave following directories RW to allow use of kubernetes readonlyrootfs flag
 VOLUME ["/var/log/datadog"]
