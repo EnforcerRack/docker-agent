@@ -160,20 +160,20 @@ COPY probe.sh initlog.sh secrets-helper/readsecret.py secrets-helper/readsecret.
 # - The debian image is now built with merged-usr explicitly disabled,
 #   see https://github.com/debuerreotype/debuerreotype/pull/50
 # - Ubuntu 20.10 uses the symlink /bin -> /usr/bin
-RUN tar xzf s6.tgz -C / --exclude="./bin" \
-  && tar xzf s6.tgz -C /usr ./bin \
-  && rm s6.tgz \
-  # Prepare for running without root
-  # - Create a dd-agent:root user and give it permissions on relevant folders
-  # - Remove the /var/run -> /run symlink and create a legit /var/run folder
-  # as some docker versions re-create /run from zero at container start
-  && adduser --system --no-create-home --disabled-password --ingroup root dd-agent \
-  && rm /var/run && mkdir -p /var/run/s6 \
-  && chown -R dd-agent:root /etc/datadog-agent/ /etc/s6/ /var/run/s6/ /var/log/datadog/ \
-  && chmod g+r,g+w,g+X -R /etc/datadog-agent/ /etc/s6/ /var/run/s6/ /var/log/datadog/ \
-  && chmod 755 /probe.sh /initlog.sh \
-  && chown root:root /readsecret.py /readsecret.sh /readsecret_multiple_providers.sh \
-  && chmod 550 /readsecret.py /readsecret.sh /readsecret_multiple_providers.sh
+# RUN tar xzf s6.tgz -C / --exclude="./bin" \
+#   && tar xzf s6.tgz -C /usr ./bin \
+#   && rm s6.tgz \
+#   # Prepare for running without root
+#   # - Create a dd-agent:root user and give it permissions on relevant folders
+#   # - Remove the /var/run -> /run symlink and create a legit /var/run folder
+#   # as some docker versions re-create /run from zero at container start
+#   && adduser --system --no-create-home --disabled-password --ingroup root dd-agent \
+#   && rm /var/run && mkdir -p /var/run/s6 \
+#   && chown -R dd-agent:root /etc/datadog-agent/ /etc/s6/ /var/run/s6/ /var/log/datadog/ \
+#   && chmod g+r,g+w,g+X -R /etc/datadog-agent/ /etc/s6/ /var/run/s6/ /var/log/datadog/ \
+#   && chmod 755 /probe.sh /initlog.sh \
+#   && chown root:root /readsecret.py /readsecret.sh /readsecret_multiple_providers.sh \
+#   && chmod 550 /readsecret.py /readsecret.sh /readsecret_multiple_providers.sh
 
 # Update links to python binaries
 RUN if [ -n "$PYTHON_VERSION" ]; then \
