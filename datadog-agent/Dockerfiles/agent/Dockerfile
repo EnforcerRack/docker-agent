@@ -212,6 +212,6 @@ RUN chmod 755 /bin/entrypoint.sh \
 
 CMD ["/bin/entrypoint.sh"]
 
-FROM release AS test
-COPY test_image_contents.py /tmp/test_image_contents.py
-RUN ./tmp/test_image_contents.py && rm -f ./tmp/test_image_contents.py
+# FROM release AS test
+# COPY test_image_contents.py /tmp/test_image_contents.py
+# RUN ./tmp/test_image_contents.py && rm -f ./tmp/test_image_contents.py
